@@ -2,8 +2,7 @@ import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # --- Important ---
-# Paste the API key from your screenshot here.
-GEMINI_KEY = "AIzaSyDIYWFvEtatYImM9fTFaWRzBwwtyKHjxA8"
+GEMINI_KEY = "GOOGLE API KEY"
 MODEL_NAME = "gemini-pro"
 
 print("--- Starting Direct API Test ---")
