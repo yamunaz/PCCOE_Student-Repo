@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Quiz Generator Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color-dark: #0f172a;
+            --card-bg-dark: #1e293b;
+            --text-primary-dark: #e2e8f0;
+            --text-secondary-dark: #94a3b8;
+            --border-color-dark: #334155;
+            --input-bg-dark: #334155;
+            --card-shadow-dark: rgba(0, 0, 0, 0.3);
+
+            --bg-color-light: #f1f5f9;
+            --card-bg-light: #ffffff;
+            --text-primary-light: #1e293b;
+            --text-secondary-light: #475569;
+            --border-color-light: #cbd5e1;
+            --input-bg-light: #f8fafc;
+            --card-shadow-light: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: var(--bg-color-dark);
+            --card-bg: var(--card-bg-dark);
+            --text-primary: var(--text-primary-dark);
+            --text-secondary: var(--text-secondary-dark);
+            --border-color: var(--border-color-dark);
+            --input-bg: var(--input-bg-dark);
+            --card-shadow: var(--card-shadow-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-color: var(--bg-color-light);
+            --card-bg: var(--card-bg-light);
+            --text-primary: var(--text-primary-light);
+            --text-secondary: var(--text-secondary-light);
+            --border-color: var(--border-color-light);
+            --input-bg: var(--input-bg-light);
+            --card-shadow: var(--card-shadow-light);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 800px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px var(--card-shadow), 0 4px 6px -2px var(--card-shadow);
+            position: relative;
+            transition: background-color 0.3s;
+        }
+        .correct-answer {
+            background-color: #10b981;
+            color: #044e42 !important;
+            border-color: #059669 !important;
+        }
+        .incorrect-answer {
+            background-color: #ef4444;
+            color: #7f1d1d !important;
+            border-color: #dc2626 !important;
+        }
+        .missed-answer {
+            background-color: #fef08a;
+            color: #713f12 !important;
+            border-color: #facc15 !important;
+        }
+        .type-selected {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 15px #6366f1;
+            background-color: transparent !important;
+            color: #eef2ff !important;
+        }
+        .neon-box-active {
+            border-color: #6366f1 !important; 
+            box-shadow: 0 0 15px #6366f1;
+            color: #e0e7ff !important;
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+        input::placeholder {
+            color: var(--text-secondary);
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        .the-text-primary { color: var(--text-primary); }
+        .the-text-secondary { color: var(--text-secondary); }
+        .the-bg-input { background-color: var(--input-bg); }
+        .the-border { border-color: var(--border-color); }
+        .the-bg-gray-800 { background-color: #1f2937; } 
+        [data-theme="light"] .the-bg-gray-800 { background-color: #f3f4f6; }
+
+        #pdf-content-template {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            padding: 0.5in;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #000;
+            background-color: #fff;
+            width: 8.5in;
+            box-sizing: border-box;
+        }
+        #pdf-content-template h1 { font-size: 20pt; color: #333; text-align: center; margin-bottom: 20pt; border-bottom: 2px solid #ccc; padding-bottom: 10pt; }
+        #pdf-content-template .pdf-question { margin-bottom: 15pt; padding-bottom: 5pt; border-bottom: 1px dashed #eee; page-break-inside: avoid; }
+        #pdf-content-template .pdf-question-text { font-size: 14pt; font-weight: bold; margin-bottom: 8pt; color: #333; }
+        #pdf-content-template .pdf-option { margin-left: 20pt; font-size: 12pt; line-height: 1.5; color: #555; }
+        #pdf-content-template .pdf-answer { margin-top: 5pt; font-weight: bold; color: #059669; font-size: 12pt; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="container mx-auto">
+        <div id="loading" class="hidden flex flex-col items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-4 the-text-primary font-medium text-lg">Reading content & Generating quiz...</p>
+        </div>
+
+        <div id="promptScreen" class="card flex flex-col items-center">
+            <button id="theme-toggle" class="absolute top-4 right-4 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"></button>
+            <h1 class="text-3xl font-bold the-text-primary mb-6 text-center">AI Quiz Generator Agent</h1>
+            
+            <!-- TABS -->
+            <div class="w-full mb-8">
+                <div class="flex space-x-4">
+                    <button id="tabTopic" class="flex-1 py-3 text-center rounded-lg border-2 font-bold transition-all duration-300 neon-box-active">By Topic</button>
+                    <button id="tabUpload" class="flex-1 py-3 text-center rounded-lg border-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-all duration-300">Upload</button>
+                </div>
+            </div>
+
+            <!-- Topic Input -->
+            <div id="topicSection" class="w-full">
+                <label for="topicInput" class="w-full text-left the-text-primary mb-1">Quiz Topic</label>
+                <input type="text" id="topicInput" placeholder="e.g., Solar System, Marketing Strategies" class="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 the-bg-input the-text-primary the-border">
+            </div>
+
+            <!-- Upload Input (Updated for Image & Paste) -->
+            <div id="uploadSection" class="w-full hidden">
+                <label class="w-full text-left the-text-primary mb-1">Upload Material (PDF or Image)</label>
+                
+                <!-- Drop/Paste Zone -->
+                <div id="dropZone" class="w-full p-6 mb-4 border-2 border-dashed border-gray-500 rounded-lg the-bg-input flex flex-col justify-center items-center text-center transition-colors hover:border-indigo-400">
+                    <input type="file" id="fileInput" accept=".pdf, .png, .jpg, .jpeg" class="hidden"/>
+                    
+                    <button id="browseBtn" class="px-4 py-2 bg-indigo-600 rounded text-white text-sm font-medium hover:bg-indigo-700 transition">Choose File</button>
+                    <p class="text-xs text-gray-400 mt-2">or paste (Ctrl+V) an image here</p>
+                    <p id="fileNameDisplay" class="text-sm font-semibold text-indigo-300 mt-3 hidden"></p>
+                    
+                    <!-- Image Preview -->
+                    <img id="imagePreview" class="mt-3 max-h-40 rounded border border-gray-600 hidden" alt="Preview">
+                </div>
+                <p class="text-xs text-gray-500 mb-4">Supported: PDF, JPG, PNG (Screenshots supported)</p>
+            </div>
+
+            <label for="numQuestionsInput" class="w-full text-left the-text-primary mb-1">Number of Questions (1-100)</label>
+            <input type="number" id="numQuestionsInput" placeholder="3-5 recommended" value="3" min="1" max="100" class="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 the-bg-input the-text-primary the-border">
+            
+            <label class="w-full text-left the-text-primary mb-2">Question Type</label>
+            <div id="questionTypeButtons" class="w-full flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
+                <div id="type-single_choice" data-type="single_choice" class="question-type-btn flex-1 p-3 text-center border-2 rounded-lg cursor-pointer transition-all duration-200 type-selected the-border the-text-secondary hover:border-indigo-400">Single Choice</div>
+                <div id="type-multi_choice" data-type="multi_choice" class="question-type-btn flex-1 p-3 text-center border-2 rounded-lg cursor-pointer transition-all duration-200 the-border the-text-secondary hover:border-indigo-400">Multiple Correct</div>
+                <div id="type-mixed" data-type="mixed" class="question-type-btn flex-1 p-3 text-center border-2 rounded-lg cursor-pointer transition-all duration-200 the-border the-text-secondary hover:border-indigo-400">Mixed Types</div>
+            </div>
+
+            <button id="generateBtn" class="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900">Generate Quiz</button>
+        </div>
+
+        <div id="quizScreen" class="card hidden">
+            <h2 id="quizTitle" class="text-2xl font-bold the-text-primary mb-6 text-center border-b pb-4 the-border"></h2>
+            <div id="quizContainer"></div>
+            <div class="mt-8 flex justify-end">
+                <button id="submitBtn" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900">Submit Answers</button>
+            </div>
+            <div id="resultsBanner" class="hidden mt-8 text-center p-6 rounded-lg border-4 border-indigo-500 the-bg-gray-800">
+                <p id="scoreText" class="text-2xl font-extrabold text-indigo-400 mb-4"></p>
+                <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                    <button id="exportBtn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Export Quiz</button>
+                    <button id="newQuizBtn" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">Start New Quiz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="pdf-content-template"></div>
+
+    <!-- Modals -->
+    <div id="exportModal" class="modal-overlay hidden">
+        <div class="modal-content w-full sm:w-3/4 lg:w-1/2">
+            <h3 class="text-2xl font-bold the-text-primary mb-4">Export Quiz</h3>
+            <textarea id="exportTextarea" readonly class="w-full h-40 p-4 border rounded-lg text-sm font-mono the-bg-input the-text-primary the-border"></textarea>
+            <div class="mt-4 mb-6 flex justify-start"><button id="copyBtn" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg">Copy Text</button></div>
+            <div class="mb-6 flex"><button id="downloadPdfBtn" class="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg">Download PDF</button></div>
+            <div class="mt-4 flex justify-end"><button id="closeExportModal" class="px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg">Close</button></div>
+        </div>
+    </div>
+    <div id="errorModal" class="modal-overlay hidden">
+        <div class="modal-content w-full sm:w-3/4 lg:w-1/2 border-4 border-red-500">
+            <h3 class="text-2xl font-bold text-red-400 mb-4">Quiz Generation Failed</h3>
+            <p id="errorMessage" class="the-text-primary mb-6"></p>
+            <button id="closeErrorModal" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // --- UPDATED API URL TO FIX 405 ERROR ---
+        const apiUrl = "http://127.0.0.1:5000/generate-quiz";
+
+        // DOM Elements
+        const promptScreen = document.getElementById('promptScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        const loadingScreen = document.getElementById('loading');
+        
+        const tabTopic = document.getElementById('tabTopic');
+        const tabUpload = document.getElementById('tabUpload');
+        const topicSection = document.getElementById('topicSection');
+        const uploadSection = document.getElementById('uploadSection');
+        const topicInput = document.getElementById('topicInput');
+        
+        // Upload & Paste Elements
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const dropZone = document.getElementById('dropZone');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const imagePreview = document.getElementById('imagePreview');
+
+        const numQuestionsInput = document.getElementById('numQuestionsInput');
+        const questionTypeButtonsContainer = document.getElementById('questionTypeButtons');
+        const questionTypeButtons = document.querySelectorAll('.question-type-btn');
+        const generateBtn = document.getElementById('generateBtn');
+        const quizTitle = document.getElementById('quizTitle');
+        const quizContainer = document.getElementById('quizContainer');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultsBanner = document.getElementById('resultsBanner');
+        const scoreText = document.getElementById('scoreText');
+        const newQuizBtn = document.getElementById('newQuizBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const exportModal = document.getElementById('exportModal');
+        const exportTextarea = document.getElementById('exportTextarea');
+        const copyBtn = document.getElementById('copyBtn');
+        const closeExportModal = document.getElementById('closeExportModal');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        const pdfContentTemplate = document.getElementById('pdf-content-template');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const errorModal = document.getElementById('errorModal');
+        const errorMessageDisplay = document.getElementById('errorMessage');
+        const closeErrorModal = document.getElementById('closeErrorModal');
+
+        let currentQuestionType = 'single_choice';
+        let currentMode = 'topic';
+        let quizData = [];
+        let userAnswers = {};
+        let selectedFile = null;
+
+        // --- THEME ---
+        const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="the-text-secondary"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+        const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="the-text-secondary"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeToggleBtn.innerHTML = theme === 'dark' ? sunIcon : moonIcon;
+        }
+        themeToggleBtn.addEventListener('click', () => {
+            let newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        });
+
+        // --- UI HELPERS ---
+        const showScreen = (screen) => {
+            promptScreen.classList.add('hidden');
+            quizScreen.classList.add('hidden');
+            loadingScreen.classList.add('hidden');
+            errorModal.classList.add('hidden'); 
+            exportModal.classList.add('hidden');
+            screen.classList.remove('hidden');
+        };
+        const showErrorModal = (message) => {
+            errorMessageDisplay.textContent = message;
+            errorModal.classList.remove('hidden');
+        };
+        const updateQuestionType = (type) => {
+            currentQuestionType = type;
+            questionTypeButtons.forEach(btn => btn.classList.toggle('type-selected', btn.dataset.type === type));
+        };
+
+        // --- UPLOAD & PASTE LOGIC ---
+        browseBtn.addEventListener('click', () => fileInput.click());
+
+        const handleFileSelection = (file) => {
+            if (!file) return;
+            selectedFile = file;
+            fileNameDisplay.textContent = "Selected: " + file.name;
+            fileNameDisplay.classList.remove('hidden');
+            
+            // Preview Image
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.classList.add('hidden');
+            }
+        };
+
+        fileInput.addEventListener('change', (e) => handleFileSelection(e.target.files[0]));
+
+        // Global Paste Listener
+        window.addEventListener('paste', (e) => {
+            if (currentMode !== 'upload') return; // Only paste in Upload tab
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file') {
+                    const blob = item.getAsFile();
+                    const pastedFile = new File([blob], "pasted_image.png", { type: "image/png" });
+                    handleFileSelection(pastedFile);
+                }
+            }
+        });
+
+        // --- TABS ---
+        const activeClasses = ['neon-box-active'];
+        const inactiveClasses = ['border-transparent', 'text-gray-400', 'hover:text-gray-200', 'hover:border-gray-600'];
+
+        tabTopic.addEventListener('click', () => {
+            currentMode = 'topic';
+            topicSection.classList.remove('hidden');
+            uploadSection.classList.add('hidden');
+            tabTopic.classList.add(...activeClasses);
+            tabTopic.classList.remove(...inactiveClasses);
+            tabUpload.classList.add(...inactiveClasses);
+            tabUpload.classList.remove(...activeClasses);
+        });
+
+        tabUpload.addEventListener('click', () => {
+            currentMode = 'upload';
+            uploadSection.classList.remove('hidden');
+            topicSection.classList.add('hidden');
+            tabUpload.classList.add(...activeClasses);
+            tabUpload.classList.remove(...inactiveClasses);
+            tabTopic.classList.add(...inactiveClasses);
+            tabTopic.classList.remove(...activeClasses);
+        });
+
+        // --- GENERATE ---
+        const generateQuiz = async () => {
+            const numQuestions = numQuestionsInput.value;
+            const topic = topicInput.value.trim();
+
+            if (currentMode === 'topic' && !topic) return showErrorModal("Please enter a quiz topic.");
+            if (currentMode === 'upload' && !selectedFile) return showErrorModal("Please upload or paste a file.");
+
+            showScreen(loadingScreen);
+            userAnswers = {};
+            resultsBanner.classList.add('hidden');
+            submitBtn.classList.remove('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('numQuestions', numQuestions);
+                formData.append('questionType', currentQuestionType);
+                
+                if (currentMode === 'topic') formData.append('topic', topic);
+                else formData.append('file', selectedFile);
+
+                const response = await fetch(apiUrl, { method: 'POST', body: formData });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = errorText;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        if(errorJson.error) errorMessage = errorJson.error;
+                    } catch(e) { }
+                    throw new Error(errorMessage || `Server Error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                if (result.error) throw new Error(result.error);
+                
+                quizData = result.quiz;
+                renderQuiz(currentMode === 'topic' ? topic : (selectedFile.name));
+
+            } catch (error) {
+                console.error("Quiz Generation Error:", error);
+                showErrorModal(`Failed: ${error.message}`);
+            }
+        };
+
+        const renderQuiz = (title) => {
+            quizTitle.textContent = `Quiz on: ${title}`;
+            quizContainer.innerHTML = '';
+            quizData.forEach((q, i) => {
+                const isMulti = Array.isArray(q.correctAnswerIndex);
+                userAnswers[i] = isMulti ? [] : null;
+                const div = document.createElement('div');
+                div.id = `q-${i}`;
+                div.className = 'mb-6 p-6 rounded-xl transition-all the-bg-gray-800 border the-border';
+                div.innerHTML = `<p class="font-semibold text-xl mb-4 text-indigo-300">Q${i+1}. ${q.question} <span class="text-sm italic text-gray-400">${isMulti ? '(Select all)' : ''}</span></p>`;
+                
+                q.options.forEach((opt, oIndex) => {
+                    const label = document.createElement('label');
+                    label.className = 'option-label flex items-center space-x-3 mb-3 p-3 rounded-lg border cursor-pointer the-border the-text-primary hover:bg-indigo-500/10';
+                    const input = document.createElement('input');
+                    input.type = isMulti ? 'checkbox' : 'radio';
+                    input.name = `q-${i}`;
+                    input.className = 'w-5 h-5 text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500 mr-3';
+                    
+                    if (!isMulti) input.onchange = () => userAnswers[i] = oIndex;
+                    else input.onchange = (e) => { e.target.checked ? userAnswers[i].push(oIndex) : userAnswers[i] = userAnswers[i].filter(x=>x!==oIndex); };
+                    
+                    label.append(input, document.createTextNode(opt));
+                    div.appendChild(label);
+                });
+                quizContainer.appendChild(div);
+            });
+            showScreen(quizScreen);
+        };
+
+        const submitQuiz = () => {
+            let score = 0;
+            quizData.forEach((q, i) => {
+                const isMulti = Array.isArray(q.correctAnswerIndex);
+                const ua = userAnswers[i];
+                let correct = false;
+                if (!isMulti) correct = (ua === parseInt(q.correctAnswerIndex));
+                else correct = (JSON.stringify(q.correctAnswerIndex.map(Number).sort()) === JSON.stringify((ua||[]).map(Number).sort()));
+                if(correct) score++;
+
+                const div = document.getElementById(`q-${i}`);
+                const opts = div.querySelectorAll('.option-label');
+                const correctIndices = isMulti ? q.correctAnswerIndex.map(Number) : [parseInt(q.correctAnswerIndex)];
+                
+                opts.forEach((opt, oIndex) => {
+                    opt.querySelector('input').disabled = true;
+                    opt.classList.remove('hover:bg-indigo-500/10', 'cursor-pointer');
+                    const selected = isMulti ? ua.includes(oIndex) : ua === oIndex;
+                    if(selected) opt.classList.add(correctIndices.includes(oIndex) ? 'correct-answer' : 'incorrect-answer', 'font-bold');
+                    else if(correctIndices.includes(oIndex)) opt.classList.add('missed-answer', 'font-bold');
+                });
+            });
+            scoreText.textContent = `Score: ${score} / ${quizData.length}`;
+            resultsBanner.classList.remove('hidden');
+            submitBtn.classList.add('hidden');
+        };
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
+            updateQuestionType('single_choice');
+        });
+        generateBtn.onclick = generateQuiz;
+        submitBtn.onclick = submitQuiz;
+        newQuizBtn.onclick = () => showScreen(promptScreen);
+        exportBtn.onclick = () => {
+             let txt = `Quiz: ${quizTitle.textContent}\n\n`;
+             quizData.forEach((q,i) => {
+                 txt += `Q${i+1}. ${q.question}\nOptions:\n${q.options.map(o=>'- '+o).join('\n')}\nAnswer: ${JSON.stringify(q.correctAnswerIndex)}\n\n`;
+             });
+             exportTextarea.value = txt;
+             exportModal.classList.remove('hidden');
+        };
+        copyBtn.onclick = () => { exportTextarea.select(); document.execCommand('copy'); };
+        closeExportModal.onclick = () => exportModal.classList.add('hidden');
+        closeErrorModal.onclick = () => errorModal.classList.add('hidden');
+        downloadPdfBtn.onclick = () => {
+             pdfContentTemplate.innerHTML = `<h1>${quizTitle.textContent}</h1>` + quizData.map((q,i)=>`<div class="pdf-question"><p class="pdf-question-text">Q${i+1}. ${q.question}</p>${q.options.map(o=>`<p class="pdf-option">- ${o}</p>`).join('')}</div>`).join('');
+             html2pdf().from(pdfContentTemplate).save();
+        };
+        questionTypeButtonsContainer.onclick = (e) => { const btn = e.target.closest('.question-type-btn'); if(btn) updateQuestionType(btn.dataset.type); };
+
+    </script>
+</body>
+</html>
