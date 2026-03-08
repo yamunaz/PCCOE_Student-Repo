@@ -9,7 +9,6 @@ import json
 from collections import deque
 
 # --- 0. Fix for Windows Asyncio Loop Policy (Standard Safety) ---
-# Even though we use sync logic, some libraries might use async internally
 if sys.platform == 'win32':
     import asyncio
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -68,8 +67,6 @@ class RateLimiter:
             self.timestamps.popleft()
 
         if len(self.timestamps) >= self.max_calls:
-            # We are full. Calculate wait time.
-            # Wait until the oldest timestamp expires.
             sleep_time = self.period - (now - self.timestamps[0]) + 0.5 # +0.5s buffer
             print(f"🛑 Rate Limit Hit. Sleeping for {sleep_time:.2f}s...")
             time.sleep(sleep_time)
