@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimodal MCTS Summarizer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .media-indicator {
+            display: inline-block;
+            background: #805ad5;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .video-preview, .image-preview {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+        }
+        
+        .video-preview video {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+        
+        .image-preview img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .file-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
+        }
+        
+        .extra-files {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Multimodal MCTS Summarizer</h1>
+        <p class="subtitle">Summarize text, images, and videos using MCTS optimization</p>
+        
+        <div class="input-section">
+            <h2>📝 Input Content</h2>
+            <textarea id="textInput" placeholder="Enter text to summarize or describe your media content..."></textarea>
+            
+            <div class="multimodal-section">
+                <h3>📁 Upload Media Files</h3>
+                <div class="upload-controls">
+                    <div class="upload-group">
+                        <label for="videoUpload">🎬 Video File:</label>
+                        <input type="file" id="videoUpload" accept="video/*">
+                        <div id="videoPreview" class="preview"></div>
+                    </div>
+                    
+                    <div class="upload-group">
+                        <label for="imageUpload">🖼️ Image File:</label>
+                        <input type="file" id="imageUpload" accept="image/*" multiple>
+                        <div id="imagePreviews" class="preview-container"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="simulations">MCTS Simulations:</label>
+                    <input type="range" id="simulations" min="10" max="200" value="50">
+                    <span id="simulationsValue">50</span>
+                </div>
+                <button id="summarizeBtn" class="btn-primary">🚀 Generate Summary</button>
+                <button id="clearBtn" class="btn-secondary">🗑️ Clear All</button>
+            </div>
+        </div>
+        
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>⏳ Processing content with MCTS optimization...</p>
+            <div id="progressInfo"></div>
+        </div>
+        
+        <div id="results" class="hidden">
+            <h2>📋 Summary Results</h2>
+            <div class="summary-section">
+                <div class="summary-header">
+                    <h3>🏆 Best Summary </h3>
+                    <div class="confidence-badge">
+                        Confidence: <span id="confidenceScore">0</span>%
+                    </div>
+                </div>
+                <div class="summary-box" id="bestSummary"></div>
+                <div class="agent-info">
+                    Selected by: <span id="selectedAgent">-</span> |
+                    Simulations: <span id="simulationsCount">0</span>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    <!-- System Status Indicator -->
+<div id="systemStatus" class="system-status hidden">
+    <span id="statusIcon">●</span>
+    <span id="statusText">Checking...</span>
+</div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
